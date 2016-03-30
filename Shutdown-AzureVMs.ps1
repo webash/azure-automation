@@ -1,15 +1,15 @@
 workflow Shutdown-AzureVMs
 {
-        param (
-			[parameter(Mandatory=$true)] 
-		    [string]$CredentialName,
-				  
-	        [parameter(Mandatory=$true)] 
-	        [string]$Subscription,
-			 
-	        [parameter(Mandatory=$true)] 
-	        [string]$VirtualMachineLike
-    )
+	param (
+		[parameter(Mandatory=$true)] 
+		[string]$CredentialName,
+
+		[parameter(Mandatory=$true)] 
+		[string]$Subscription,
+
+		[parameter(Mandatory=$true)] 
+		[string]$VirtualMachineLike
+	)
 	
 	Write-Output ( [string]::Format("----- Script Start {0} -----", (Get-Date).toString() ))
    

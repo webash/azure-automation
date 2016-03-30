@@ -2,23 +2,23 @@ workflow Start-AzureVMs
 {
 	param (
 			[parameter(Mandatory=$true)]
-		    [string]$CredentialName,
+			[string]$CredentialName,
 				  
-	        [parameter(Mandatory=$true)] 
-	        [string]$Subscription,
+			[parameter(Mandatory=$true)] 
+			[string]$Subscription,
 			 
 			# Help for how I end up using my Regex to _not_ match some VMs:
 			# http://stackoverflow.com/a/2601318/443588
 			# ^(?!hotlava-sync01$)(?!hotlava-sync03$)hotlava-.+$
-	        [parameter(Mandatory=$true)] 
-	        [string]$VirtualMachinePattern,
-			
+			[parameter(Mandatory=$true)] 
+			[string]$VirtualMachinePattern,
+
 			[bool]$isVirtualMachinePatternRegex = $false,
-			
+
 			[string]$PriorityVMsList,
-			
+
 			[int]$SleepIntervalMinutes = 5,
-			
+
 			[bool]$DontStartOnWeekends = $false
     )
 	
@@ -32,11 +32,11 @@ workflow Start-AzureVMs
 	Select-AzureSubscription -SubscriptionName $subscription
 	
 	$day = (Get-Date).DayOfWeek
-    if ( $DontStartOnWeekends -and ($day -eq 'Saturday' -or $day -eq 'Sunday') ) {
+	if ( $DontStartOnWeekends -and ($day -eq 'Saturday' -or $day -eq 'Sunday') ) {
 		Write-Output ([string]::Format("-DontStartOnWeekends switch was provided, and it is {0} - script aborting", (Get-Date).toString() ))
 		Write-Output ([string]::Format("----- Script End {0} -----", (Get-Date).toString() ))
-        exit
-    }
+		exit
+	}
 	
 	if (-not $PriorityVMsList.isNullOrEmpty) {
 		
