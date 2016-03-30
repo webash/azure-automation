@@ -31,7 +31,7 @@ workflow Shutdown-AzureVMs
 	}
 	
 	$VMs = Get-AzureVM | Where-Object -FilterScript { $_.Name -like $VirtualMachineLike }
-	$VMs | Foreach-Object { Write-Output ([string]::Format("`t{0}: {1}, {2}", $_.Name, $_.PowerState, $_.Status)) }
+	$VMs | Foreach-Object { Write-Output ([string]::Format("{0}: {1}, {2}", $_.Name, $_.PowerState, $_.Status)) }
 	
 	Write-Output ( [string]::Format("----- Script Stop {0} -----", (Get-Date).toString() ))
 }
