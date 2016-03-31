@@ -1,3 +1,33 @@
+<#
+.SYNOPSIS
+	Invokes Stop-AzureVM for each virtual machine matching a -like pattern. Intended to be run from Azure Automation.
+
+.PARAMETER CredentialName
+	The name of the credential stored in the Azure Automation assets library.
+
+.PARAMETER Subscription
+	The name of the subscription within which to retrieve (Get-AzureVM) and shutdown (Stop-AzureVM) Azure Virtual Machines.
+
+.PARAMETER VirtualMachineLike
+	Accepts a string with wildcard characters, to be fed to a -like statement.
+
+.EXAMPLE
+	The workflow is unlikely to ever be run like this, but this gives you an idea of how to fill out the parameters when prompted by Azure Automation.
+	
+	Shutdown-AzureVM.ps1 -CredentialName "Azure Automation Unattended account" -Subscription "Ashley Azure" -VirtualMachineLike "azurevm-*"
+
+.NOTES
+	Author:		ashley.geek.nz
+	Github:		https://github.com/webash/azure-automation/
+	The credential stored in the asset library within Azure Automation will need the permission (Global Admin) within the subscription in order to stop VMs.
+	See Shutdown-AzureVMs.ps1 in the same https://github.com/webash/azure-automation/ repository to _stop_ VMs too.
+
+.LINK
+	https://ashley.geek.nz/2016/03/31/using-azure-automation-to-stop-and-start-azure-iaas-virtual-machines/
+
+
+#>
+
 workflow Shutdown-AzureVMs
 {
 	param (

@@ -1,3 +1,51 @@
+<#
+.SYNOPSIS
+	Invokes Start-AzureVM for each virtual machine matching a -like or -match pattern. Intended to be run from Azure Automation.
+
+.PARAMETER CredentialName
+	The name of the credential stored in the Azure Automation assets library.
+
+.PARAMETER Subscription
+	The name of the subscription within which to retrieve (Get-AzureVM) and shutdown (Stop-AzureVM) Azure Virtual Machines.
+
+.PARAMETER VirtualMachinePattern
+	Accepts a string with wildcard characters, to be fed to a -like statement.
+	OR if also specifying isVirtualMachinePatternRegex = $true, accepts a regex pattern.
+
+.PARAMETER isVirtualMachinePatternRegex
+	Accepts $true or $false to determine whether VirtualMachinePattern takes a -like compatible, or -match (regex) compatible match string.
+
+.PARAMETER PriorityVMsList
+	Allows you to provide a list of VMs that should be booted SleepIntervalMinutes ahead of all other VMs matching the pattern.
+
+.PARAMETER SleepIntervalMinutes
+	Provide an integer that will be used as the amount of time to sleep between booting the PriorityVMsList and all other VirtualMachinePattern matching VMs.
+
+.PARAMETER DontStartOnWeekends
+	$true or $false as to whether the script should start on 'Saturday' or 'Sunday. This has only been tested for all-English environments. This is to allow for the lack of granularity in the 'daily' schedule in Azure Automation which doesn't allow for removing some days from the 'daily' list.
+
+.EXAMPLE
+	The workflow is unlikely to ever be run like this, but this gives you an idea of how to fill out the parameters when prompted by Azure Automation.
+	
+	Start-AzureVM.ps1 -CredentialName "Azure Automation Unattended account" -Subscription "Ashley Azure" -VirtualMachinePattern "azurevm-*" -PriorityVMsList "azurevm-dc01,azurevm-dc02" -SleepIntervalMinutes 10 -DontStartOnWeekends:$true
+
+.EXAMPLE
+	The workflow is unlikely to ever be run like this, but this gives you an idea of how to fill out the parameters when prompted by Azure Automation.
+	
+	Start-AzureVM.ps1 -CredentialName "Azure Automation Unattended account" -Subscription "Ashley Azure" -isVirtualMachinePatternRegex:$true -VirtualMachinePattern "^(!?azurevm-retired$)azurevm-.+$" -PriorityVMsList "azurevm-dc01,azurevm-dc02" -SleepIntervalMinutes 10 -DontStartOnWeekends:$true
+
+.NOTES
+	Author:		ashley.geek.nz
+	Github:		https://github.com/webash/azure-automation/
+	The credential stored in the asset library within Azure Automation will need the permission (Global Admin) within the subscription in order to start VMs.
+	See Start-AzureVMs.ps1 in the same https://github.com/webash/azure-automation/ repository to _start_ VMs too.
+
+.LINK
+	https://ashley.geek.nz/2016/03/31/using-azure-automation-to-stop-and-start-azure-iaas-virtual-machines/
+
+
+#>
+
 workflow Start-AzureVMs
 {
 	param (
@@ -9,7 +57,7 @@ workflow Start-AzureVMs
 			 
 			# Help for how I end up using my Regex to _not_ match some VMs:
 			# http://stackoverflow.com/a/2601318/443588
-			# ^(?!hotlava-sync01$)(?!hotlava-sync03$)hotlava-.+$
+			# ^(?!azurevm-sync01$)(?!azurevm-sync03$)azurevm-.+$
 			[parameter(Mandatory=$true)] 
 			[string]$VirtualMachinePattern,
 
