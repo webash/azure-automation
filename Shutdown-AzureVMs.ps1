@@ -11,6 +11,9 @@
 .PARAMETER VirtualMachineLike
 	Accepts a string with wildcard characters, to be fed to a -like statement.
 
+.PARAMETER AzureClassic
+	If $true, the script will use the classic (non-Resource Manager/RM/ARM) cmdlets for Azure Classic VMs.
+
 .EXAMPLE
 	The workflow is unlikely to ever be run like this, but this gives you an idea of how to fill out the parameters when prompted by Azure Automation.
 	
@@ -18,6 +21,7 @@
 
 .NOTES
 	Author:		ashley.geek.nz
+	Version:	2016-04-11 00:00 BST
 	Github:		https://github.com/webash/azure-automation/
 	The credential stored in the asset library within Azure Automation will need the permission (Global Admin) within the subscription in order to stop VMs.
 	See Shutdown-AzureVMs.ps1 in the same https://github.com/webash/azure-automation/ repository to _stop_ VMs too.
@@ -38,30 +42,76 @@ workflow Shutdown-AzureVMs
 		[string]$Subscription,
 
 		[parameter(Mandatory=$true)] 
-		[string]$VirtualMachineLike
+		[string]$VirtualMachineLike,
+		
+		[parameter(Mandatory=$false)]
+		[bool]$AzureClassic = $false
 	)
 	
 	Write-Output ( [string]::Format("----- Script Start {0} -----", (Get-Date).toString() ))
+	
+	if ( $AzureClassic ) {
+		Write-Output "Azure VM Classic cmdlets will be used for this session because -AzureClassic is true"
+	}
    
 	Write-Output "Using credential named $CredentialName"
 	$credential = Get-AutomationPSCredential -Name $CredentialName
-	Add-AzureAccount -Credential $credential
-	
-	Write-Output "Shutting down VMs in $subscription"
-	Select-AzureSubscription -SubscriptionName $subscription
-	
-	Write-Output "Gathering VMs with Name -like $VirtualMachineLike"
-	$VMs = Get-AzureVM | Where-Object -FilterScript { $_.Name -like $VirtualMachineLike }
-	$VMs | Foreach-Object { Write-Output ([string]::Format("`t{0}: {1}, {2}", $_.Name, $_.PowerState, $_.Status)) }
-	
-	foreach($VM in $VMs){
-		Write-Output ([string]::Format("Shutting Down VM {0}...", $VM.Name))
-		$operationOutput = $VM | Stop-AzureVM -force
-		Write-Output ([string]::Format("`t{0}", $operationOutput.OperationStatus))
+	if ( -not $AzureClassic ) {
+		Add-AzureRmAccount -Credential $credential
+	} else {
+		Add-AzureAccount -Credential $credential
 	}
 	
-	$VMs = Get-AzureVM | Where-Object -FilterScript { $_.Name -like $VirtualMachineLike }
-	$VMs | Foreach-Object { Write-Output ([string]::Format("{0}: {1}, {2}", $_.Name, $_.PowerState, $_.Status)) }
+	Write-Output "Shutting down VMs in $subscription"
+	if ( -not $AzureClassic ) {
+		Select-AzureRmSubscription -SubscriptionName $subscription
+	} else {
+		Select-AzureSubscription -SubscriptionName $subscription
+	}
+	
+	Write-Output "Gathering VMs with Name -like $VirtualMachineLike"
+	if ( -not $AzureClassic ) {
+		$RawVMs = Get-AzureRmVM
+	} else {
+		$RawVMs = Get-AzureVM
+	}
+	$VMs = $RawVMs | Where-Object -FilterScript { $_.Name -like $VirtualMachineLike }
+	
+	if ( -not $AzureClassic ) {
+		$VMs | Get-AzureRmVm -Status | Get-AzureRmVm -Status | Foreach-Object { Write-Output ([string]::Format("`t{0}\{1}: {2}, {3}", $_.ResourceGroupName, $_.Name, (($_.StatusesText | convertfrom-json) | Where-Object -FilterScript { $_.code -like "PowerState*" }).code, (($_.StatusesText | convertfrom-json) | Where-Object -FilterScript { $_.code -like "PowerState*" }).displayStatus)) }
+	} else {
+		$VMs | Foreach-Object { Write-Output ([string]::Format("`tClassic\{0}: {1}, {2}", $_.Name, $_.PowerState, $_.Status)) }
+	}
+
+	Write-Output "Stopping pattern-matched VMs in parallel..."
+	ForEach -Parallel ($VM in $VMs){
+		Write-Output ([string]::Format("Shutting Down VM {0}...", $VM.Name))
+		if ( -not $AzureClassic ) {
+			$operationOutput = $VM | Stop-AzureRmVM -force
+			if ( $operationOutput.IsSuccessStatusCode ) {
+				Write-Output ([string]::Format("`t{0}: {1}", $VM.Name, $operationOutput.ReasonPhrase))
+			} else {
+				Write-Error ([string]::Format("`t{0} error: {1}", $VM.Name, $operationOutput.ReasonPhrase))
+			}
+		} else {
+			$operationOutput = $VM | Stop-AzureVM -force
+			Write-Output ([string]::Format("`t{0}: {1}", $VM.Name, $operationOutput.OperationStatus))
+		}
+	}
+
+	Write-Output "Confirming new status of VMs with Name -like $VirtualMachineLike"
+	if ( -not $AzureClassic ) {
+		$RawVMs = Get-AzureRmVM
+	} else {
+		$RawVMs = Get-AzureVM
+	}
+	$VMs = $RawVMs | Where-Object -FilterScript { $_.Name -like $VirtualMachineLike }
+	
+	if ( -not $AzureClassic ) {
+		$VMs | Get-AzureRmVm -Status | Foreach-Object { Write-Output ([string]::Format("`t{0}\{1}: {2}, {3}", $_.ResourceGroupName, $_.Name, (($_.StatusesText | convertfrom-json) | Where-Object -FilterScript { $_.code -like "PowerState*" }).code, (($_.StatusesText | convertfrom-json) | Where-Object -FilterScript { $_.code -like "PowerState*" }).displayStatus)) }
+	} else {
+		$VMs | Foreach-Object { Write-Output ([string]::Format("`tClassic\{0}: {1}, {2}", $_.Name, $_.PowerState, $_.Status)) }
+	}
 	
 	Write-Output ( [string]::Format("----- Script Stop {0} -----", (Get-Date).toString() ))
 }
