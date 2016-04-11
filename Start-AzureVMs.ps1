@@ -208,7 +208,7 @@ workflow Start-AzureVMs
 		if ( -not $AzureClassic ) {
 			$parallelOperationOutput = $VM | Start-AzureRmVM
 			if ( $parallelOperationOutput.IsSuccessStatusCode ) {
-				Write-Output ([string]::Format("`t{0}\{1}: {2}", $VM.Name, $parallelOperationOutput.ReasonPhrase))
+				Write-Output ([string]::Format("`t{0}\{1}: {2}", $_.ResourceGroupName, $VM.Name, $parallelOperationOutput.ReasonPhrase))
 			} else {
 				Write-Error ([string]::Format("`t{0}\{1} error: {2}", $_.ResourceGroupName, $VM.Name, $parallelOperationOutput.ReasonPhrase))
 			}
