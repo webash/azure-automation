@@ -39,7 +39,7 @@
 
 .NOTES
 	Author:		ashley.geek.nz
-	Version:	2016-04-11 03:08 BST
+	Version:	2016-04-12 23:28 BST
 	Github:		https://github.com/webash/azure-automation/
 	The credential stored in the asset library within Azure Automation will need the permission (Global Admin) within the subscription in order to start VMs.
 	See Start-AzureVMs.ps1 in the same https://github.com/webash/azure-automation/ repository to _start_ VMs too.
@@ -121,9 +121,13 @@ workflow Start-AzureVMs
 	
 	if (-not $PriorityVMsList.isNullOrEmpty) {
 		
-		$PriorityVMs = $PriorityVMsList | select-string -pattern '[^,]+' -AllMatches
-	
 		Write-Output ([string]::Format( "Iterating Priority VMs {0}...", $PriorityVMsList )) 
+		
+		# Turns out a simple [string]::Split() is impossible in Workflows... so had to pass through to an InlineScript for proper PowerShell to take over.
+		#$PriorityVMs = $PriorityVMsList | select-string -pattern '[^,]+' -AllMatches
+		$PriorityVMs = $null
+		$PriorityVMs = InlineScript { $PriorityVMs = ($Using:PriorityVMsList).Split(','); $PriorityVMs }
+		$PriorityVMs | Foreach-Object { Write-Output "= $_" }
 		
 		foreach($VMName in $PriorityVMs){
 			if ( -not $AzureClassic ) {
