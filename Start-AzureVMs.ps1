@@ -5,6 +5,7 @@
 .PARAMETER CredentialName
 	The name of the credential stored in the Azure Automation assets library.
 
+.PARAMETER SubscriptionId
 	The Id of the subscription within which to retrieve (Get-Azure(RM)VM) and shutdown (Stop-Azure(RM)VM) Azure Virtual Machines.
 
 .PARAMETER VirtualMachinePattern
