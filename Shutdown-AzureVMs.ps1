@@ -23,7 +23,7 @@
 	Author:		ashley.geek.nz
 	Version:	2016-04-11 00:00 BST
 	Github:		https://github.com/webash/azure-automation/
-	The credential stored in the asset library within Azure Automation will need the permission (Global Admin) within the subscription in order to stop VMs.
+	The credential stored in the asset library within Azure Automation will need the permission (Virtual Machine contributor or higher) within the subscription in order to stop VMs.
 	See Shutdown-AzureVMs.ps1 in the same https://github.com/webash/azure-automation/ repository to _stop_ VMs too.
 
 .LINK
