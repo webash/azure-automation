@@ -13,7 +13,7 @@
 #>
 
 $uri = "";
-$headers = @{"From"="$(whoami)";"Date"="$(get-date)"};
+$headers = @{"From"="$(whoami)";"Date"="$(Get-Date -Format "yyyyMMdd HHmm")"};
 
 Write-Host "Invoking Webhook as $(whoami)..." -ForegroundColor Cyan -NoNewLine;
 
