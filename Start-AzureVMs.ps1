@@ -5,8 +5,7 @@
 .PARAMETER CredentialName
 	The name of the credential stored in the Azure Automation assets library.
 
-.PARAMETER Subscription
-	The name of the subscription within which to retrieve (Get-AzureVM) and shutdown (Stop-AzureVM) Azure Virtual Machines.
+	The Id of the subscription within which to retrieve (Get-Azure(RM)VM) and shutdown (Stop-Azure(RM)VM) Azure Virtual Machines.
 
 .PARAMETER VirtualMachinePattern
 	Accepts a string with wildcard characters, to be fed to a -like statement.
@@ -39,9 +38,9 @@
 
 .NOTES
 	Author:		ashley.geek.nz
-	Version:	2016-04-12 23:28 BST
+	Version:	2016-11-24 22:29 GMT
 	Github:		https://github.com/webash/azure-automation/
-	The credential stored in the asset library within Azure Automation will need the permission (Global Admin) within the subscription in order to start VMs.
+	The credential stored in the asset library within Azure Automation will need the permission (Virtual Machine contributor or higher) within the subscription in order to start VMs.
 	See Start-AzureVMs.ps1 in the same https://github.com/webash/azure-automation/ repository to _start_ VMs too.
 
 .LINK
@@ -57,7 +56,7 @@ workflow Start-AzureVMs
 			[string]$CredentialName,
 				  
 			[parameter(Mandatory=$true)] 
-			[string]$Subscription,
+			[string]$SubscriptionId,
 			 
 			# Help for how I end up using my Regex to _not_ match some VMs:
 			# http://stackoverflow.com/a/2601318/443588
@@ -100,16 +99,18 @@ workflow Start-AzureVMs
 	Write-Output "Using credential named $CredentialName"
 	$credential = Get-AutomationPSCredential -Name $CredentialName
 	if ( -not $AzureClassic ) {
-		Add-AzureRmAccount -Credential $credential -ErrorAction Stop
+		Login-AzureRmAccount -SubscriptionId $SubscriptionId -Credential $credential -ErrorAction Stop
+		#Write-Output( [string]::Format("`t{0}, {1}\{2} in tenant {3}", $Account.Context.Account.Id, $Account.Context.Subscription.SubscriptionId, $Account.Context.Subscription.SubscriptionName, $Account.Context.Subscription.TenantId ))
 	} else {
 		Add-AzureAccount -Credential $credential -ErrorAction Stop
 	}
 	
-	Write-Output "Using $subscription subscription"
+	Write-Output "Using $subscriptionid subscription"
 	if ( -not $AzureClassic ) {
-		Select-AzureRmSubscription -SubscriptionName $subscription
+		Select-AzureRmSubscription -SubscriptionId $SubscriptionId
+        #Write-Output ( [string]::Format("`t{0} ({1}) on tenant {2}", $RmSub.Subscription.SubscriptionName, $RmSub.Subscription.SubscriptionId, $RmSub.Subscription.TenantId) )
 	} else {
-		Select-AzureSubscription -SubscriptionName $subscription
+		Select-AzureSubscription -SubscriptionId $SubscriptionId
 	}
 	
 	$day = (Get-Date).DayOfWeek
@@ -127,12 +128,19 @@ workflow Start-AzureVMs
 		#$PriorityVMs = $PriorityVMsList | select-string -pattern '[^,]+' -AllMatches
 		$PriorityVMs = $null
 		$PriorityVMs = InlineScript { $PriorityVMs = ($Using:PriorityVMsList).Split(','); $PriorityVMs }
-		$PriorityVMs | Foreach-Object { Write-Output "= $_" }
+		$PriorityVMs | Foreach-Object { Write-Output "`t- $_" }
+
+        Write-Output
 		
 		foreach($VMName in $PriorityVMs){
 			if ( -not $AzureClassic ) {
 				$VM = Get-AzureRmVM | Where-Object -filterScript { $_.name -eq $VMName }
-				$VM | Get-AzureRmVm -Status | Get-AzureRmVm -Status | Foreach-Object { Write-Output ([string]::Format("`t{0}\{1}: {2}, {3}", $_.ResourceGroupName, $_.Name, (($_.StatusesText | convertfrom-json) | Where-Object -FilterScript { $_.code -like "PowerState*" }).code, (($_.StatusesText | convertfrom-json) | Where-Object -FilterScript { $_.code -like "PowerState*" }).displayStatus)) }
+				$VM | Get-AzureRmVm -Status | `
+					Foreach-Object { Write-Output ([string]::Format("`t{0}\{1}: {2}, {3}",`
+						$_.ResourceGroupName,`
+						$_.Name,`
+						(($_.StatusesText | convertfrom-json) | Where-Object -FilterScript { $_.code -like "PowerState*" }).code,`
+						(($_.StatusesText | convertfrom-json) | Where-Object -FilterScript { $_.code -like "PowerState*" }).displayStatus)) }
 			} else {
 				$VM = Get-AzureVM | Where-Object -filterScript { $_.name -eq $VMName }
 				Write-Output ([string]::Format("`tClassic\{0}: {1}, {2}", $VM.Name, $VM.PowerState, $VM.Status))
@@ -154,7 +162,13 @@ workflow Start-AzureVMs
 
 				if ( -not $AzureClassic ) {
 					$VM = Get-AzureRmVM | Where-Object -filterScript { $_.name -eq $VMName }
-					$VM | Get-AzureRmVm -Status | Get-AzureRmVm -Status | Foreach-Object { Write-Output ([string]::Format("`t{0}\{1}: {2}, {3}", $_.ResourceGroupName, $_.Name, (($_.StatusesText | convertfrom-json) | Where-Object -FilterScript { $_.code -like "PowerState*" }).code, (($_.StatusesText | convertfrom-json) | Where-Object -FilterScript { $_.code -like "PowerState*" }).displayStatus)) }
+					$VM | Get-AzureRmVm -Status | `
+						Foreach-Object { Write-Output ([string]::Format("`t{0}\{1}: {2}, {3}",`
+							$_.ResourceGroupName,`
+							$_.Name,`
+							(($_.StatusesText | convertfrom-json) | Where-Object -FilterScript { $_.code -like "PowerState*" }).code,`
+							(($_.StatusesText | convertfrom-json) | Where-Object -FilterScript { $_.code -like "PowerState*" }).displayStatus)) }
+
 				} else {
 					$VM = Get-AzureVM | Where-Object -filterScript { $_.name -eq $VMName }
 					Write-Output ([string]::Format("`tClassic\{0}: {1}, {2}", $VM.Name, $VM.PowerState, $VM.Status))
@@ -174,7 +188,12 @@ workflow Start-AzureVMs
 		foreach ($VMName in $PriorityVMs) {
 			if ( -not $AzureClassic ) {
 				$VM = Get-AzureRmVM | Where-Object -filterScript { $_.name -eq $VMName }
-				$VM | Get-AzureRmVm -Status | Get-AzureRmVm -Status | Foreach-Object { Write-Output ([string]::Format("`t{0}\{1}: {2}, {3}", $_.ResourceGroupName, $_.Name, (($_.StatusesText | convertfrom-json) | Where-Object -FilterScript { $_.code -like "PowerState*" }).code, (($_.StatusesText | convertfrom-json) | Where-Object -FilterScript { $_.code -like "PowerState*" }).displayStatus)) }
+				$VM | Get-AzureRmVm -Status | `
+					Foreach-Object { Write-Output ([string]::Format("`t{0}\{1}: {2}, {3}",`
+						$_.ResourceGroupName,`
+						$_.Name,`
+						(($_.StatusesText | convertfrom-json) | Where-Object -FilterScript { $_.code -like "PowerState*" }).code,`
+						(($_.StatusesText | convertfrom-json) | Where-Object -FilterScript { $_.code -like "PowerState*" }).displayStatus)) }
 			} else {
 				$VM = Get-AzureVM | Where-Object -filterScript { $_.name -eq $VMName }
 				Write-Output ([string]::Format("`tClassic\{0}: {1}, {2}", $VM.Name, $VM.PowerState, $VM.Status))
@@ -200,7 +219,12 @@ workflow Start-AzureVMs
 	Write-Output "Gathering VMs matching pattern/like..."
 	if ( -not $AzureClassic ) {
 		$VMs = Get-AzureRmVM | Where-Object -filterScript { (($isVirtualMachinePatternRegex -and $_.Name -match $VirtualMachinePattern) -or $_.Name -like $VirtualMachinePattern) -and -not ($PriorityVMsList -contains $_.Name) }
-		$VMs | Get-AzureRmVm -Status | Get-AzureRmVm -Status | Foreach-Object { Write-Output ([string]::Format("`t{0}\{1}: {2}, {3}", $_.ResourceGroupName, $_.Name, (($_.StatusesText | convertfrom-json) | Where-Object -FilterScript { $_.code -like "PowerState*" }).code, (($_.StatusesText | convertfrom-json) | Where-Object -FilterScript { $_.code -like "PowerState*" }).displayStatus)) }
+		$VM | Get-AzureRmVm -Status | `
+			Foreach-Object { Write-Output ([string]::Format("`t{0}\{1}: {2}, {3}",`
+				$_.ResourceGroupName,`
+				$_.Name,`
+				(($_.StatusesText | convertfrom-json) | Where-Object -FilterScript { $_.code -like "PowerState*" }).code,`
+				(($_.StatusesText | convertfrom-json) | Where-Object -FilterScript { $_.code -like "PowerState*" }).displayStatus)) }
 	} else {
 		$VMs = Get-AzureVM | Where-Object -filterScript { (($isVirtualMachinePatternRegex -and $_.Name -match $VirtualMachinePattern) -or $_.Name -like $VirtualMachinePattern) -and -not ($PriorityVMsList -contains $_.Name) }
 		$VMs | Foreach-Object { Write-Output ([string]::Format("`tClassic\{0}: {1}, {2}", $_.Name, $_.PowerState, $_.Status)) }
@@ -225,7 +249,11 @@ workflow Start-AzureVMs
 	Write-Output "Confirming new status of VMs with Name -like/-match $VirtualMachineLike"
 	if ( -not $AzureClassic ) {
 		Get-AzureRmVM | Get-AzureRmVm -Status | Where-Object -FilterScript { (($isVirtualMachinePatternRegex -and $_.Name -match $VirtualMachinePattern) -or $_.Name -like $VirtualMachinePattern) -and -not ($PriorityVMsList -contains $_.Name) } |`
-			Foreach-Object { Write-Output ([string]::Format("`t{0}\{1}: {2}, {3}", $_.ResourceGroupName, $_.Name, (($_.StatusesText | convertfrom-json) | Where-Object -FilterScript { $_.code -like "PowerState*" }).code, (($_.StatusesText | convertfrom-json) | Where-Object -FilterScript { $_.code -like "PowerState*" }).displayStatus)) }
+			Foreach-Object { Write-Output ([string]::Format("`t{0}\{1}: {2}, {3}",`
+				$_.ResourceGroupName,`
+				$_.Name,`
+				(($_.StatusesText | convertfrom-json) | Where-Object -FilterScript { $_.code -like "PowerState*" }).code,`
+				(($_.StatusesText | convertfrom-json) | Where-Object -FilterScript { $_.code -like "PowerState*" }).displayStatus)) }
 	} else {
 		Get-AzureVM | Where-Object -FilterScript { (($isVirtualMachinePatternRegex -and $_.Name -match $VirtualMachinePattern) -or $_.Name -like $VirtualMachinePattern) -and -not ($PriorityVMsList -contains $_.Name) } | `
 			Foreach-Object { Write-Output ([string]::Format("`tClassic\{0}: {1}, {2}", $_.Name, $_.PowerState, $_.Status)) }
