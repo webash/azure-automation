@@ -134,6 +134,7 @@ workflow Start-AzureVMs
         Write-Output
 		
 		foreach($VMName in $PriorityVMs){
+			Write-Output ([string]::Format("Getting initial state of {0}...", $VMName))
 			if ( -not $AzureClassic ) {
 				$VM = Get-AzureRmVM | Where-Object -filterScript { $_.name -eq $VMName }
 				$VM | Get-AzureRmVm -Status | `
@@ -148,13 +149,13 @@ workflow Start-AzureVMs
 			}
 			
 			if ( $VM -ne $null ) {
-				Write-Output ([string]::Format("`tStarting VM {0}...", $VM.Name))
+				Write-Output ([string]::Format("Starting VM {0}...", $VM.Name))
 				if ( -not $AzureClassic ) {
 					$operationOutput = $VM | Start-AzureRmVM
 					if ( $operationOutput.IsSuccessStatusCode ) {
-						Write-Output ([string]::Format("`t{0}", $operationOutput.ReasonPhrase))
+						Write-Output ([string]::Format("`t...{0}", $operationOutput.ReasonPhrase))
 					} else {
-						Write-Error ([string]::Format("`tError: {0}", $operationOutput.ReasonPhrase))
+						Write-Error ([string]::Format("`t...Error: {0}", $operationOutput.ReasonPhrase))
 					}
 				} else {
 					$operationOutput = $VM | Start-AzureVM
@@ -237,9 +238,9 @@ workflow Start-AzureVMs
 		if ( -not $AzureClassic ) {
 			$parallelOperationOutput = $VM | Start-AzureRmVM
 			if ( $parallelOperationOutput.IsSuccessStatusCode ) {
-				Write-Output ([string]::Format("`t{0}\{1}: {2}", $_.ResourceGroupName, $VM.Name, $parallelOperationOutput.ReasonPhrase))
+				Write-Output ([string]::Format("`t{0}\{1}: {2}", $VM.ResourceGroupName, $VM.Name, $parallelOperationOutput.ReasonPhrase))
 			} else {
-				Write-Error ([string]::Format("`t{0}\{1} error: {2}", $_.ResourceGroupName, $VM.Name, $parallelOperationOutput.ReasonPhrase))
+				Write-Error ([string]::Format("`t{0}\{1} error: {2}", $VM.ResourceGroupName, $VM.Name, $parallelOperationOutput.ReasonPhrase))
 			}
 		} else {
 			$parallelOperationOutput = $VM | Start-AzureVM
