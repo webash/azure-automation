@@ -26,7 +26,7 @@ function AreYouSure {
 	if ($Host.Name -eq "ConsoleHost")
 	{
 		Write-Host "Press any key to continue..."
-		$Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyUp") > $null;
+		$Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") > $null;
 	}
 }
 
