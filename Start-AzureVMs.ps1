@@ -131,7 +131,7 @@ workflow Start-AzureVMs
 		$PriorityVMs = InlineScript { $PriorityVMs = ($Using:PriorityVMsList).Split(','); $PriorityVMs }
 		$PriorityVMs | Foreach-Object { Write-Output "`t- $_" }
 
-        Write-Output
+        Write-Output ""
 		
 		foreach($VMName in $PriorityVMs){
 			Write-Output ([string]::Format("Getting initial state of {0}...", $VMName))
