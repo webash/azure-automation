@@ -39,7 +39,7 @@
 
 .NOTES
 	Author:		ashley.geek.nz
-	Version:	2016-11-24 22:29 GMT
+	Version:	2017-02-08 12:28 GMT
 	Github:		https://github.com/webash/azure-automation/
 	The credential stored in the asset library within Azure Automation will need the permission (Virtual Machine contributor or higher) within the subscription in order to start VMs.
 	See Start-AzureVMs.ps1 in the same https://github.com/webash/azure-automation/ repository to _start_ VMs too.
@@ -131,7 +131,7 @@ workflow Start-AzureVMs
 		$PriorityVMs = InlineScript { $PriorityVMs = ($Using:PriorityVMsList).Split(','); $PriorityVMs }
 		$PriorityVMs | Foreach-Object { Write-Output "`t- $_" }
 
-        Write-Output
+        Write-Output ""
 		
 		foreach($VMName in $PriorityVMs){
 			Write-Output ([string]::Format("Getting initial state of {0}...", $VMName))
@@ -155,7 +155,11 @@ workflow Start-AzureVMs
 					if ( $operationOutput.IsSuccessStatusCode ) {
 						Write-Output ([string]::Format("`t...{0}", $operationOutput.ReasonPhrase))
 					} else {
-						Write-Error ([string]::Format("`t...Error: {0}", $operationOutput.ReasonPhrase))
+                        if ( $operationOutput.ReasonPhrase -ne $null ) {
+						    Write-Error ([string]::Format("`t...Error: {0}", $operationOutput.ReasonPhrase))
+                        } else {
+                            Write-Error "`t...Error: <no message available, likely there is an exception notice above>"
+                        }
 					}
 				} else {
 					$operationOutput = $VM | Start-AzureVM
