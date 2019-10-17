@@ -40,8 +40,9 @@ try {
 
 if ( $ExpiryDateTimeCast -lt (Get-Date) ) {
 	Write-Error "It is likely this WebHook invocation will fail, as the expiry date for the webhook was $($ExpiryDateTimeCast -f "yyyyMMdd HHmm"). You will need to request/create a new one.";
+	AreYouSure;
 } elseif ( $ExpiryDateTimeCast -lt (Get-Date).AddDays(30) ) {
-	Write-Warning "There is less than 30 days left of this WebHook's validity. You may wish to request another."
+	Write-Warning "There is less than 30 days left of this WebHook's validity. It expires at $($ExpiryDateTimeCast -f "yyyyMMdd HHmm"). You may wish to request another."
 	AreYouSure;
 }
 
